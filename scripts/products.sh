@@ -1,7 +1,7 @@
 python3 ~/workspace/dgl-baseline/tools/launch.py --workspace ~/workspace/dgl-baseline/src \
     --num_trainers 8 \
     --num_servers 1 \
-    --num_samplers 1 \
+    --num_samplers 2 \
     --part_config /home/ubuntu/workspace/data/ogbn-products_4p_ud/ogb-product.json  \
     --ip_config ip_config_4p.txt \
     "/home/ubuntu/anaconda3/envs/dglbase/bin/python3 ~/workspace/dgl-baseline/src/train_dist_transductive.py --graph_name ogb-product \
