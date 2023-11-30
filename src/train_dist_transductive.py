@@ -160,8 +160,8 @@ def run(args, device, data, group=None):
 
     iter_tput = []
     epoch = 0
-    log_path = f'./result_1120/acc_{args.graph_name}.log'
-    res_path = f'./result_1120/acc_{args.graph_name}.txt'
+    log_path = f'./result/{args.graph_name}.log'
+    res_path = f'./result/{args.graph_name}.txt'
     epoch_list = []
     for epoch in range(args.num_epochs):
         tic = time.time()
