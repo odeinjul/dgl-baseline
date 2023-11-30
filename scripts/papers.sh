@@ -1,6 +1,6 @@
 python3 ~/workspace/dgl-baseline/tools/launch.py --workspace ~/workspace/dgl-baseline/src \
     --num_trainers 8 \
-    --num_servers 2 \
+    --num_servers 1 \
     --num_samplers 1 \
     --part_config /home/ubuntu/workspace/data/ogbn-papers100m_4p_ud/ogb-paper100M.json \
     --ip_config ip_config_4p.txt   \

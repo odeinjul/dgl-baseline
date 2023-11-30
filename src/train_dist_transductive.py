@@ -269,7 +269,7 @@ def run(args, device, data, group=None):
                         "Emb Update Time(s): {:.4f}\n"
                         "#seeds: {}\n"
                         "#inputs: {}\n"
-                        "=====================".format(
+                        "=====================\n".format(
                         th.distributed.get_rank(),
                         toc - tic,
                         sample_time,
