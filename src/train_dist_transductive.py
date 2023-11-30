@@ -215,7 +215,7 @@ def run(args, device, data, group=None):
                 th.cuda.synchronize()
                 emb_update_time += time.time() - emb_update_start
 
-                step_t = time.time() - start
+                step_t = time.time() - tic_step
                 step_time.append(step_t)
                 iter_tput.append(len(blocks[-1].dstdata[dgl.NID]) / step_t)
                 if step % args.log_every == 0:
@@ -252,7 +252,7 @@ def run(args, device, data, group=None):
                                     gpu_mem_alloc,
                                     np.sum(step_time[-args.log_every:])
                                 ))
-                start = time.time()
+                tic_step = time.time()
 
         toc = time.time()
         epoch_list.append(toc - tic)
