@@ -212,7 +212,7 @@ def run(args, device, data, group=None):
 
                 emb_update_start = time.time()
                 emb_optimizer.step()
-                #th.cuda.synchronize()
+                th.cuda.synchronize()
                 emb_update_time += time.time() - emb_update_start
 
                 step_t = time.time() - tic_step
