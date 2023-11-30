@@ -167,41 +167,53 @@ def run(args, device, data, group=None):
         tic = time.time()
 
         sample_time = 0
-        copy_time = 0
+        load_time = 0
         forward_time = 0
         backward_time = 0
         update_time = 0
+        emb_update_time = 0
         num_seeds = 0
         num_inputs = 0
-        start = time.time()
+
         with model.join():
             step_time = []
+            tic = time.time()
+            tic_step = time.time()
             for step, (input_nodes, seeds, blocks) in enumerate(dataloader):
-                sample_time += time.time() - start
+                th.cuda.synchronize()
+                sample_time += time.time() - tic_step
                 
-                copy_start = time.time()
+                load_begin = time.time()
                 num_seeds += len(blocks[-1].dstdata[dgl.NID])
                 num_inputs += len(blocks[0].srcdata[dgl.NID])
                 blocks = [block.to(device) for block in blocks]
                 batch_labels = g.ndata["labels"][seeds].long().to(device)
                 batch_inputs = emb_layer(input_nodes)
-                copy_time += time.time() - copy_start
+                th.cuda.synchronize()
+                load_time += time.time() - load_begin
 
-                mid_start = time.time()
+                forward_start = time.time()
                 batch_pred = model(blocks, batch_inputs)
                 loss = loss_fcn(batch_pred, batch_labels)
-                forward_end = time.time()
+                th.cuda.synchronize()
+                forward_time += time.time() - forward_start
 
+                backward_begin = time.time()
                 emb_optimizer.zero_grad()
                 optimizer.zero_grad()
                 loss.backward()
-                compute_end = time.time()
-                forward_time += forward_end - mid_start
-                backward_time += compute_end - forward_end
+                th.cuda.synchronize()
+                backward_time += time.time() - backward_begin
 
-                emb_optimizer.step()
+                update_start = time.time()
                 optimizer.step()
-                update_time += time.time() - compute_end
+                th.cuda.synchronize()
+                update_time += time.time() - update_start
+
+                emb_update_start = time.time()
+                emb_optimizer.step()
+                th.cuda.synchronize()
+                emb_update_time += time.time() - emb_update_start
 
                 step_t = time.time() - start
                 step_time.append(step_t)
@@ -244,38 +256,35 @@ def run(args, device, data, group=None):
 
         toc = time.time()
         epoch_list.append(toc - tic)
+        epoch += 1
+
         if th.distributed.get_rank() == 0:
-            print(
-                "Part {}, Epoch Time(s): {:.4f}, sample: {:.4f}, "
-                "Load: {:.4f}, forward: {:.4f}, backward: {:.4f}, update: {:.4f}, #seeds: {}, "
-                "#inputs: {}"
-                    .format(
-                    g.rank(),
-                    toc - tic,
-                    sample_time,
-                    copy_time,
-                    forward_time,
-                    backward_time,
-                    update_time,
-                    num_seeds,
-                    num_inputs,
-                )
-            )
-            with open(log_path, 'a') as f:
-                    f.write("Part {}, Epoch Time(s): {:.4f}, sample: {:.4f}, Load: {:.4f}, forward: {:.4f}, backward: {:.4f}, update: {:.4f}, #seeds: {}, #inputs: {}\n"
-                        .format(
-                        g.rank(),
+            timetable = ("=====================\n"
+                        "Part {}, Epoch Time(s): {:.4f}\n"
+                        "Sampling Time(s): {:.4f}\n"
+                        "Loading Time(s): {:.4f}\n"
+                        "Forward Time(s): {:.4f}\n"
+                        "Backward Time(s): {:.4f}\n"
+                        "Update Time(s): {:.4f}\n"
+                        "Emb Update Time(s): {:.4f}\n"
+                        "#seeds: {}\n"
+                        "#inputs: {}\n"
+                        "=====================".format(
+                        th.distributed.get_rank(),
                         toc - tic,
                         sample_time,
-                        copy_time,
+                        load_time,
                         forward_time,
                         backward_time,
                         update_time,
+                        emb_update_time,
                         num_seeds,
                         num_inputs,
-                    ))
+            ))
+            print(timetable)
+            with open(log_path, 'a') as f:
+                    f.write(timetable)
                 
-        epoch += 1
 
         if epoch % args.eval_every == 0 and epoch != 0:
             start = time.time()
