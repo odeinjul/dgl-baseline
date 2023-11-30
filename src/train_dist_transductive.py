@@ -180,7 +180,7 @@ def run(args, device, data, group=None):
             tic = time.time()
             tic_step = time.time()
             for step, (input_nodes, seeds, blocks) in enumerate(dataloader):
-                th.cuda.synchronize()
+                #th.cuda.synchronize()
                 sample_time += time.time() - tic_step
                 
                 load_begin = time.time()
@@ -189,30 +189,30 @@ def run(args, device, data, group=None):
                 blocks = [block.to(device) for block in blocks]
                 batch_labels = g.ndata["labels"][seeds].long().to(device)
                 batch_inputs = emb_layer(input_nodes)
-                th.cuda.synchronize()
+                #th.cuda.synchronize()
                 load_time += time.time() - load_begin
 
                 forward_start = time.time()
                 batch_pred = model(blocks, batch_inputs)
                 loss = loss_fcn(batch_pred, batch_labels)
-                th.cuda.synchronize()
+                #th.cuda.synchronize()
                 forward_time += time.time() - forward_start
 
                 backward_begin = time.time()
                 emb_optimizer.zero_grad()
                 optimizer.zero_grad()
                 loss.backward()
-                th.cuda.synchronize()
+                #th.cuda.synchronize()
                 backward_time += time.time() - backward_begin
 
                 update_start = time.time()
                 optimizer.step()
-                th.cuda.synchronize()
+                #th.cuda.synchronize()
                 update_time += time.time() - update_start
 
                 emb_update_start = time.time()
                 emb_optimizer.step()
-                th.cuda.synchronize()
+                #th.cuda.synchronize()
                 emb_update_time += time.time() - emb_update_start
 
                 step_t = time.time() - tic_step
