@@ -54,11 +54,10 @@ class DistGAT(nn.Module):
     def forward(self, blocks, x):
         h = x
         for l, (layer, block) in enumerate(zip(self.layers, blocks)):
-            h_dst = h[: block.num_dst_nodes()]
             if l < self.n_layers - 1:
-                h = layer(block, (h, h_dst)).flatten(1)
+                h = layer(block, h).flatten(1)
             else:
-                h = layer(block, (h, h_dst))
+                h = layer(block, h)
         h = h.mean(1)
         return h
 
@@ -292,8 +291,7 @@ def run(args, device, data):
         # as a list of blocks.
         step_time = []
 
-        with model.join():
-            
+        with model.join():  
                 #sample start
             for step, (input_nodes, seeds, blocks) in enumerate(dataloader):
                 sample_time += time.time() - start
