@@ -51,14 +51,15 @@ class DistGAT(nn.Module):
             )
         )
 
-    def forward(self, g, x):
+    def forward(self, blocks, x):
         h = x
-        for i, layer in enumerate(self.layers):
-            h = layer(g, h)
-            if i == 1:
-                h = h.mean(1)
-            else:  
-                h = h.flatten(1)
+        for l, (layer, block) in enumerate(zip(self.layers, blocks)):
+            h_dst = h[: block.num_dst_nodes()]
+            if l < self.n_layers - 1:
+                h = layer(block, (h, h_dst)).flatten(1)
+            else:
+                h = layer(block, (h, h_dst))
+        h = h.mean(1)
         return h
 
     def inference(self, g, x, batch_size, num_heads, device):
