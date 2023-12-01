@@ -196,6 +196,9 @@ def run(args, device, data, group=None):
 
                 forward_start = time.time()
                 batch_pred = model(blocks, batch_inputs)
+                if th.distributed.get_rank() == 0:
+                    print(batch_pred.shape, batch_labels.shape)
+                    print(batch_pred.dtype, batch_labels.dtype)
                 loss = loss_fcn(batch_pred, batch_labels)
                 th.cuda.synchronize()
                 forward_time += time.time() - forward_start

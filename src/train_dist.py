@@ -70,7 +70,7 @@ class DistGAT(nn.Module):
             else:
                 h = layer(g, (h, h_dst))
         h = h.mean(1)
-        return h.log_softmax(dim=-1)
+        return h
 
     def inference(self, g, x, batch_size, num_heads, device):
         nodes = dgl.distributed.node_split(
