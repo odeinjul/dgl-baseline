@@ -38,6 +38,7 @@ class DistGAT(nn.Module):
                 n_hidden,
                 num_heads=num_heads,
                 activation=activation,
+                allow_zero_in_degree=True,
             )
         )
         for i in range(1, n_layers - 1):
@@ -47,6 +48,7 @@ class DistGAT(nn.Module):
                     n_hidden,
                     num_heads=num_heads,
                     activation=activation,
+                    allow_zero_in_degree=True,
                 )
             )
         self.layers.append(
@@ -55,6 +57,7 @@ class DistGAT(nn.Module):
                 n_classes,
                 num_heads=num_heads,
                 activation=None,
+                allow_zero_in_degree=True,
             )
         )
 
