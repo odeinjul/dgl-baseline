@@ -117,9 +117,6 @@ def run(args, device, data, group=None):
         dgl_sparse_emb=args.dgl_sparse,
         dev_id=device,
     )
-    if th.distributed.get_rank() == 0:
-        print("build model")
-        print(n_classes)
     model = DistGAT(
         args.num_hidden,
         32,
