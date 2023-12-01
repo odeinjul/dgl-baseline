@@ -92,7 +92,7 @@ class DistGAT(nn.Module):
                     g.num_nodes(), 
                     self.n_classes),
                     th.float32,
-                    "h",
+                    "h_last",
                     persistent=True,
                 )
             #print(f"|V|={g.num_nodes()}, eval batch size: {batch_size}")
