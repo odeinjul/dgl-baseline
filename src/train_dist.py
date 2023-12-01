@@ -23,6 +23,96 @@ def load_subtensor(g, seeds, input_nodes, device, load_feat=True):
     batch_labels = g.ndata["labels"][seeds].to(device)
     return batch_inputs, batch_labels
 
+class DistGAT(nn.Module):
+    def __init__(
+        self, in_size, hid_size, out_size, heads
+    ):
+        super().__init__()
+        self.layers = nn.ModuleList()
+        # 2-layer
+        self.layers.append(
+            dglnn.GATConv(
+                in_size,
+                hid_size,
+                heads[0],
+                feat_drop=0.6,
+                attn_drop=0.6,
+                activation=F.elu,
+            )
+        )
+        self.layers.append(
+            dglnn.GATConv(
+                hid_size * heads[0],
+                out_size,
+                heads[1],
+                feat_drop=0.6,
+                attn_drop=0.6,
+                activation=None,
+            )
+        )
+
+    def forward(self, g, x):
+        h = x
+        for i, layer in enumerate(self.layers):
+            h = layer(g, h)
+            if i == 2:  
+                h = h.mean(1)
+            else:  
+                h = h.flatten(1)
+        return h
+
+    def inference(self, g, x, batch_size, device):
+        nodes = dgl.distributed.node_split(
+            np.arange(g.num_nodes()),
+            g.get_partition_book(),
+            force_even=True,
+        )
+        y = dgl.distributed.DistTensor(
+            (g.num_nodes(), self.n_hidden),
+            th.float32,
+            "h",
+            persistent=True,
+        )
+        for i, layer in enumerate(self.layers):
+            if i == len(self.layers) - 1:
+                y = dgl.distributed.DistTensor(
+                    (g.num_nodes(), self.n_classes),
+                    th.float32,
+                    "h_last",
+                    persistent=True,
+                )
+            print(f"|V|={g.num_nodes()}, eval batch size: {batch_size}")
+            sampler = dgl.dataloading.MultiLayerFullNeighborSampler(1)
+            dataloader = dgl.dataloading.DistNodeDataLoader(
+                g,
+                nodes,
+                sampler,
+                batch_size=batch_size,
+                shuffle=False,
+                drop_last=False,
+            )
+
+            for input_nodes, output_nodes, blocks in dataloader:
+                block = blocks[0].to(device)
+                h = x[input_nodes].to(device)
+                h_dst = h[: block.number_of_dst_nodes()]
+                h = layer(block, (h, h_dst))
+                if i != 2:
+                    h = h.flatten(1)
+                else:
+                    h = h.mean(1)
+
+                y[output_nodes] = h.cpu()
+
+            x = y
+            g.barrier()
+        return y
+
+    @contextmanager
+    def join(self):
+        """dummy join for standalone"""
+        yield
+
 
 class DistSAGE(nn.Module):
     def __init__(
