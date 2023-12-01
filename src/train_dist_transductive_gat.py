@@ -344,12 +344,10 @@ def main(args):
     if not args.standalone:
         th.distributed.init_process_group(backend="gloo")
     g = dgl.distributed.DistGraph(
-            args.graph_name,
-            part_config=args.part_config
-    
+        args.graph_name,
+        part_config=args.part_config
     )
-    g = dgl.distributed.add_self_loop(g)
-
+    
 
     print("rank:", g.rank())
 
@@ -357,6 +355,11 @@ def main(args):
     train_nid = dgl.distributed.node_split(
         g.ndata["train_mask"], pb, force_even=True
     )
+
+    g = g.local_var()
+    g.ndata['self_loop'] = th.arange(g.number_of_nodes())
+    g.add_edges(g.ndata['self_loop'], g.ndata['self_loop'])
+
     val_nid = dgl.distributed.node_split(
         g.ndata["val_mask"], pb, force_even=True
     )
