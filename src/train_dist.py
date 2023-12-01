@@ -82,9 +82,7 @@ class DistGAT(nn.Module):
             if i < self.n_layers - 1:
                 y = dgl.distributed.DistTensor((
                     g.num_nodes(), 
-                    self.n_hidden * num_heads
-                    if i != len(self.layers) - 1
-                    else self.n_classes),
+                    self.n_hidden * num_heads),
                     th.float32,
                     "h",
                     persistent=True,
@@ -92,14 +90,12 @@ class DistGAT(nn.Module):
             else:
                 y = dgl.distributed.DistTensor((
                     g.num_nodes(), 
-                    self.n_hidden
-                    if i != len(self.layers) - 1
-                    else self.n_classes),
+                    self.n_classes),
                     th.float32,
                     "h",
                     persistent=True,
                 )
-            print(f"|V|={g.num_nodes()}, eval batch size: {batch_size}")
+            #print(f"|V|={g.num_nodes()}, eval batch size: {batch_size}")
             sampler = dgl.dataloading.MultiLayerFullNeighborSampler(1)
             dataloader = dgl.dataloading.DistNodeDataLoader(
                 g,
