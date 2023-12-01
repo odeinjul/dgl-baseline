@@ -348,7 +348,7 @@ def main(args):
             part_config=args.part_config
         )
     print("rank:", g.rank())
-    g = dgl.add_self_loop(g)
+    g = dgl.AddSelfLoop(g)
 
     pb = g.get_partition_book()
     train_nid = dgl.distributed.node_split(
