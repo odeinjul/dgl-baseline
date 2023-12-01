@@ -345,9 +345,6 @@ def main(args):
             args.graph_name,
             part_config=args.part_config
         )
-    self_loop_src = th.arange(g.number_of_nodes())
-    g.add_edges(self_loop_src, self_loop_src)
-    g.barrier()
 
     print("rank:", g.rank())
 
