@@ -36,16 +36,26 @@ class DistGAT(nn.Module):
             dglnn.GATConv(
                 in_feats,
                 n_hidden,
-                num_heads,
+                num_heads=num_heads,
                 activation=activation,
                 allow_zero_in_degree=True,
             )
         )
+        for i in range(1, n_layers - 1):
+            self.layers.append(
+                dglnn.GATConv(
+                    n_hidden * num_heads,
+                    n_hidden,
+                    num_heads=num_heads,
+                    activation=activation,
+                    allow_zero_in_degree=True,
+                )
+            )
         self.layers.append(
             dglnn.GATConv(
                 n_hidden * num_heads,
                 n_classes,
-                num_heads=1,
+                num_heads=num_heads,
                 activation=None,
                 allow_zero_in_degree=True,
             )
@@ -54,10 +64,12 @@ class DistGAT(nn.Module):
     def forward(self, blocks, x):
         h = x
         for l, (layer, block) in enumerate(zip(self.layers, blocks)):
+            h_dst = h[: block.num_dst_nodes()]
             if l < self.n_layers - 1:
-                h = layer(block, h).flatten(1)
+                h = layer(block, (h, h_dst)).flatten(1)
             else:
-                h = layer(block, h)
+                h = layer(block, (h, h_dst))
+        h = h.mean(1)
         return h
 
     def inference(self, g, x, batch_size, num_heads, device):
@@ -70,7 +82,9 @@ class DistGAT(nn.Module):
             if i < self.n_layers - 1:
                 y = dgl.distributed.DistTensor((
                     g.num_nodes(), 
-                    self.n_hidden * num_heads),
+                    self.n_hidden * num_heads
+                    if i != len(self.layers) - 1
+                    else self.n_classes),
                     th.float32,
                     "h",
                     persistent=True,
@@ -78,7 +92,9 @@ class DistGAT(nn.Module):
             else:
                 y = dgl.distributed.DistTensor((
                     g.num_nodes(), 
-                    self.n_classes),
+                    self.n_hidden
+                    if i != len(self.layers) - 1
+                    else self.n_classes),
                     th.float32,
                     "h",
                     persistent=True,

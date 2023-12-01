@@ -100,7 +100,9 @@ def evaluate(
 def run(args, device, data, group=None):
     # Unpack data
     train_nid, val_nid, test_nid, n_classes, g = data
-    sampler = dgl.dataloading.MultiLayerFullNeighborSampler(1)
+    sampler = dgl.dataloading.NeighborSampler(
+        [int(fanout) for fanout in args.fan_out.split(",")]
+    )
     dataloader = dgl.dataloading.DistNodeDataLoader(
         g,
         train_nid,
@@ -407,7 +409,7 @@ if __name__ == "__main__":
     parser.add_argument("--num_epochs", type=int, default=20)
     parser.add_argument("--num_hidden", type=int, default=16)
     parser.add_argument("--num_layers", type=int, default=3)
-    #parser.add_argument("--fan_out", type=str, default="10,25")
+    parser.add_argument("--fan_out", type=str, default="10,25")
     parser.add_argument("--batch_size", type=int, default=1000)
     parser.add_argument("--batch_size_eval", type=int, default=100000)
     parser.add_argument("--log_every", type=int, default=20)
