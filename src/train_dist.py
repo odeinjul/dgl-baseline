@@ -70,6 +70,8 @@ class DistGAT(nn.Module):
             else:
                 h = layer(block, (h, h_dst))
         h = h.mean(1)
+        if th.distributed.get_rank() == 0:
+            print(h.shape)
         return h
 
     def inference(self, g, x, batch_size, num_heads, device):
