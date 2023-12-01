@@ -25,60 +25,75 @@ def load_subtensor(g, seeds, input_nodes, device, load_feat=True):
 
 class DistGAT(nn.Module):
     def __init__(
-        self, in_size, hid_size, out_size, heads
+        self, in_feats, n_hidden, n_classes, n_layers, num_heads, activation
     ):
         super().__init__()
+        self.n_layers = n_layers
+        self.n_hidden = n_hidden
+        self.n_classes = n_classes
         self.layers = nn.ModuleList()
-        # 2-layer
         self.layers.append(
             dglnn.GATConv(
-                in_size,
-                hid_size,
-                heads[0],
-                feat_drop=0.6,
-                attn_drop=0.6,
-                activation=F.elu,
+                (in_feats, in_feats),
+                n_hidden,
+                num_heads=num_heads,
+                activation=activation,
             )
         )
+        for i in range(1, n_layers - 1):
+            self.layers.append(
+                dglnn.GATConv(
+                    (n_hidden * num_heads, n_hidden * num_heads),
+                    n_hidden,
+                    num_heads=num_heads,
+                    activation=activation,
+                )
+            )
         self.layers.append(
             dglnn.GATConv(
-                hid_size * heads[0],
-                out_size,
-                heads[1],
-                feat_drop=0.6,
-                attn_drop=0.6,
+                (n_hidden * num_heads, n_hidden * num_heads),
+                n_classes,
+                num_heads=num_heads,
                 activation=None,
             )
         )
 
     def forward(self, g, x):
         h = x
-        for i, layer in enumerate(self.layers):
-            h = layer(g, h)
-            if i == 2:  
-                h = h.mean(1)
-            else:  
-                h = h.flatten(1)
-        return h
+        for i, (layer, g) in enumerate(zip(self.layers, g)):
+            h_dst = h[: g.num_dst_nodes()]
+            if i < self.n_layers - 1:
+                h = layer(g, (h, h_dst)).flatten(1)
+            else:
+                h = layer(g, (h, h_dst))
+        h = h.mean(1)
+        return h.log_softmax(dim=-1)
 
-    def inference(self, g, x, batch_size, device):
+    def inference(self, g, x, batch_size, num_heads, device):
         nodes = dgl.distributed.node_split(
             np.arange(g.num_nodes()),
             g.get_partition_book(),
             force_even=True,
         )
-        y = dgl.distributed.DistTensor(
-            (g.num_nodes(), self.n_hidden),
-            th.float32,
-            "h",
-            persistent=True,
-        )
         for i, layer in enumerate(self.layers):
-            if i == len(self.layers) - 1:
-                y = dgl.distributed.DistTensor(
-                    (g.num_nodes(), self.n_classes),
+            if i < self.n_layers - 1:
+                y = dgl.distributed.DistTensor((
+                    g.num_nodes(), 
+                    self.n_hidden * num_heads
+                    if i != len(self.layers) - 1
+                    else self.n_classes),
                     th.float32,
-                    "h_last",
+                    "h",
+                    persistent=True,
+                )
+            else:
+                y = dgl.distributed.DistTensor((
+                    g.num_nodes(), 
+                    self.n_hidden
+                    if i != len(self.layers) - 1
+                    else self.n_classes),
+                    th.float32,
+                    "h",
                     persistent=True,
                 )
             print(f"|V|={g.num_nodes()}, eval batch size: {batch_size}")
@@ -95,15 +110,14 @@ class DistGAT(nn.Module):
             for input_nodes, output_nodes, blocks in dataloader:
                 block = blocks[0].to(device)
                 h = x[input_nodes].to(device)
-                h_dst = h[: block.number_of_dst_nodes()]
-                h = layer(block, (h, h_dst))
-                if i != 2:
-                    h = h.flatten(1)
+                h_dst = h[: block.num_dst_nodes()]
+                if i < self.n_layers - 1:
+                    h = layer(block, (h, h_dst)).flatten(1)
                 else:
+                    h = layer(block, (h, h_dst))
                     h = h.mean(1)
-
+                    h = h.log_softmax(dim=-1)
                 y[output_nodes] = h.cpu()
-
             x = y
             g.barrier()
         return y
