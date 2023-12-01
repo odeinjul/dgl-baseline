@@ -199,6 +199,7 @@ def run(args, device, data, group=None):
                 print(batch_pred.shape, batch_labels.shape)
                 print(batch_pred.dtype, batch_labels.dtype)
                 loss = loss_fcn(batch_pred, batch_labels)
+                batch_labels = batch_labels.float()
                 th.cuda.synchronize()
                 forward_time += time.time() - forward_start
 
