@@ -34,28 +34,18 @@ class DistGAT(nn.Module):
         self.layers = nn.ModuleList()
         self.layers.append(
             dglnn.GATConv(
-                (in_feats, in_feats),
+                in_feats,
                 n_hidden,
-                num_heads=num_heads,
+                num_heads,
                 activation=activation,
                 allow_zero_in_degree=True,
             )
         )
-        for i in range(1, n_layers - 1):
-            self.layers.append(
-                dglnn.GATConv(
-                    (n_hidden * num_heads, n_hidden * num_heads),
-                    n_hidden,
-                    num_heads=num_heads,
-                    activation=activation,
-                    allow_zero_in_degree=True,
-                )
-            )
         self.layers.append(
             dglnn.GATConv(
-                (n_hidden * num_heads, n_hidden * num_heads),
+                n_hidden * num_heads,
                 n_classes,
-                num_heads=num_heads,
+                num_heads=1,
                 activation=None,
                 allow_zero_in_degree=True,
             )
@@ -63,13 +53,12 @@ class DistGAT(nn.Module):
 
     def forward(self, g, x):
         h = x
-        for i, (layer, g) in enumerate(zip(self.layers, g)):
-            h_dst = h[: g.num_dst_nodes()]
-            if i < self.n_layers - 1:
-                h = layer(g, (h, h_dst)).flatten(1)
-            else:
-                h = layer(g, (h, h_dst))
-        h = h.mean(1)
+        for i, layer in enumerate(self.layers):
+            h = layer(g, h)
+            if i == 1:
+                h = h.mean(1)
+            else:  
+                h = h.flatten(1)
         return h
 
     def inference(self, g, x, batch_size, num_heads, device):
@@ -82,9 +71,7 @@ class DistGAT(nn.Module):
             if i < self.n_layers - 1:
                 y = dgl.distributed.DistTensor((
                     g.num_nodes(), 
-                    self.n_hidden * num_heads
-                    if i != len(self.layers) - 1
-                    else self.n_classes),
+                    self.n_hidden * num_heads),
                     th.float32,
                     "h",
                     persistent=True,
@@ -92,9 +79,7 @@ class DistGAT(nn.Module):
             else:
                 y = dgl.distributed.DistTensor((
                     g.num_nodes(), 
-                    self.n_hidden
-                    if i != len(self.layers) - 1
-                    else self.n_classes),
+                    self.n_classes),
                     th.float32,
                     "h",
                     persistent=True,
