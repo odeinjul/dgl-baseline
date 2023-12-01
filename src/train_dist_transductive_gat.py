@@ -115,12 +115,18 @@ def run(args, device, data, group=None):
         dgl_sparse_emb=args.dgl_sparse,
         dev_id=device,
     )
+    if th.distributed.get_rank() == 0:
+        print("build model")
     model = DistGAT(
         args.num_hidden,
-        256,
+        128,
         n_classes,
+        args.num_layers,
         args.heads,
+        F.relu,
     )
+    if th.distributed.get_rank() == 0:
+        print(model)
     model = model.to(device)
     if not args.standalone:
         if args.num_gpus == -1:
@@ -398,7 +404,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--num_epochs", type=int, default=20)
     parser.add_argument("--num_hidden", type=int, default=16)
-    #parser.add_argument("--num_layers", type=int, default=2)
+    parser.add_argument("--num_layers", type=int, default=3)
     #parser.add_argument("--fan_out", type=str, default="10,25")
     parser.add_argument("--batch_size", type=int, default=1000)
     parser.add_argument("--batch_size_eval", type=int, default=100000)
