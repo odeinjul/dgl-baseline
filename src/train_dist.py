@@ -58,7 +58,6 @@ class DistGAT(nn.Module):
                 h = layer(block, h).flatten(1)
             else:
                 h = layer(block, h)
-        h = h.mean(1)
         return h
 
     def inference(self, g, x, batch_size, num_heads, device):
