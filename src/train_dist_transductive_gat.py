@@ -337,6 +337,13 @@ def run(args, device, data, group=None):
             ))
 
 
+def add_self_loop(g, part_id, num_parts):
+    local_g, _ = g.get_partition(part_id)
+
+    self_loop_src = th.arange(local_g.number_of_nodes())
+    local_g.add_edges(self_loop_src, self_loop_src)
+
+    g.barrier()
 
 
 def main(args):
@@ -348,7 +355,8 @@ def main(args):
             part_config=args.part_config
         )
     print("rank:", g.rank())
-    g = dgl.AddSelfLoop(g)
+    for part_id in range(th.distributed.get_world_size()):
+        add_self_loop(g, part_id, th.distributed.get_world_size())
 
     pb = g.get_partition_book()
     train_nid = dgl.distributed.node_split(
