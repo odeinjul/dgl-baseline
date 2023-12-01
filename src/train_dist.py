@@ -55,7 +55,7 @@ class DistGAT(nn.Module):
             dglnn.GATConv(
                 n_hidden * num_heads,
                 n_classes,
-                num_heads=num_heads,
+                num_heads=1,
                 activation=None,
                 allow_zero_in_degree=True,
             )
