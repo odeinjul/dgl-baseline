@@ -24,81 +24,82 @@ def load_subtensor(g, seeds, input_nodes, device, load_feat=True):
     return batch_inputs, batch_labels
 
 class DistGAT(nn.Module):
-    def __init__(
-        self, in_feats, n_hidden, n_classes, n_layers, num_heads, activation
-    ):
+    def __init__(self,
+                 in_feats,
+                 n_hidden,
+                 n_classes,
+                 n_layers,
+                 n_heads,
+                 activation=F.relu,
+                 feat_dropout=0.6,
+                 attn_dropout=0.6):
+        assert len(n_heads) == n_layers
+        assert n_heads[-1] == 1
+
         super().__init__()
         self.n_layers = n_layers
         self.n_hidden = n_hidden
         self.n_classes = n_classes
+        self.n_heads = n_heads
+
         self.layers = nn.ModuleList()
-        self.layers.append(
-            dglnn.GATConv(
-                in_feats,
-                n_hidden,
-                num_heads=num_heads,
-                activation=activation,
-                allow_zero_in_degree=True,
-            )
-        )
-        for i in range(1, n_layers - 1):
+        for i in range(0, n_layers):
+            in_dim = in_feats if i == 0 else n_hidden * n_heads[i - 1]
+            out_dim = n_classes if i == n_layers - 1 else n_hidden
+            layer_activation = None if i == n_layers - 1 else activation
             self.layers.append(
-                dglnn.GATConv(
-                    n_hidden * num_heads,
-                    n_hidden,
-                    num_heads=num_heads,
-                    activation=activation,
-                    allow_zero_in_degree=True,
-                )
-            )
-        self.layers.append(
-            dglnn.GATConv(
-                n_hidden * num_heads,
-                n_classes,
-                num_heads=1,
-                activation=None,
-                allow_zero_in_degree=True,
-            )
-        )
+                dglnn.GATConv(in_dim,
+                              out_dim,
+                              n_heads[i],
+                              feat_drop=feat_dropout,
+                              attn_drop=attn_dropout,
+                              activation=layer_activation,
+                              allow_zero_in_degree=True))
 
     def forward(self, blocks, x):
         h = x
-        for l, (layer, block) in enumerate(zip(self.layers, blocks)):
-            h_dst = h[: block.num_dst_nodes()]
-            if l < self.n_layers - 1:
-                h = layer(block, (h, h_dst)).flatten(1)
+        for i, (layer, block) in enumerate(zip(self.layers, blocks)):
+            h = layer(block, h)
+            if i == self.n_layers - 1:
+                h = h.mean(1)
             else:
-                h = layer(block, (h, h_dst))
-        h = h.mean(1)
-        if th.distributed.get_rank() == 0:
-            print(h.shape)
+                h = h.flatten(1)
         return h
 
-    def inference(self, g, x, batch_size, num_heads, device):
+    def inference(self, g, x, batch_size, device):
+        """
+        Inference with the GAT model on full neighbors (i.e. without
+        neighbor sampling).
+
+        g : the entire graph.
+        x : the input of entire node set.
+
+        Distributed layer-wise inference.
+        """
         nodes = dgl.distributed.node_split(
             np.arange(g.num_nodes()),
             g.get_partition_book(),
             force_even=True,
         )
+
         for i, layer in enumerate(self.layers):
-            if i < self.n_layers - 1:
-                y = dgl.distributed.DistTensor((
-                    g.num_nodes(), 
-                    self.n_hidden * num_heads),
-                    th.float32,
-                    "h",
-                    persistent=True,
-                )
-            else:
-                y = dgl.distributed.DistTensor((
-                    g.num_nodes(), 
-                    self.n_classes),
+            if i == len(self.layers) - 1:
+                y = dgl.distributed.DistTensor(
+                    (g.num_nodes(), self.n_classes * self.n_heads[i]),
                     th.float32,
                     "h_last",
                     persistent=True,
                 )
-            #print(f"|V|={g.num_nodes()}, eval batch size: {batch_size}")
-            sampler = dgl.dataloading.MultiLayerFullNeighborSampler(1)
+            else:
+                y = dgl.distributed.DistTensor(
+                    (g.num_nodes(), self.n_hidden * self.n_heads[i]),
+                    th.float32,
+                    "h",
+                    persistent=True,
+                )
+            print(f"|V|={g.num_nodes()}, eval batch size: {batch_size}")
+
+            sampler = dgl.dataloading.NeighborSampler([-1])
             dataloader = dgl.dataloading.DistNodeDataLoader(
                 g,
                 nodes,
@@ -108,17 +109,18 @@ class DistGAT(nn.Module):
                 drop_last=False,
             )
 
-            for input_nodes, output_nodes, blocks in dataloader:
+            for input_nodes, output_nodes, blocks in tqdm.tqdm(dataloader):
                 block = blocks[0].to(device)
                 h = x[input_nodes].to(device)
-                h_dst = h[: block.num_dst_nodes()]
-                if i < self.n_layers - 1:
-                    h = layer(block, (h, h_dst)).flatten(1)
-                else:
-                    h = layer(block, (h, h_dst))
+                h_dst = h[:block.number_of_dst_nodes()]
+                h = layer(block, (h, h_dst))
+                if i == self.n_layers - 1:
                     h = h.mean(1)
-                    h = h.log_softmax(dim=-1)
+                else:
+                    h = h.flatten(1)
+
                 y[output_nodes] = h.cpu()
+
             x = y
             g.barrier()
         return y
@@ -127,7 +129,6 @@ class DistGAT(nn.Module):
     def join(self):
         """dummy join for standalone"""
         yield
-
 
 class DistSAGE(nn.Module):
     def __init__(

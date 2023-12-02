@@ -117,14 +117,14 @@ def run(args, device, data, group=None):
         dgl_sparse_emb=args.dgl_sparse,
         dev_id=device,
     )
-    model = DistGAT(
-        args.num_hidden,
+    model = DistGAT(args.num_hidden,
         32,
         n_classes,
         args.num_layers,
-        args.heads,
-        F.relu,
-    )
+        [8,8,1],
+        activation=F.relu,
+        feat_dropout=args.feat_dropout,
+        attn_dropout=args.attn_dropout)
     if th.distributed.get_rank() == 0:
         print(model)
     model = model.to(device)
@@ -410,6 +410,8 @@ if __name__ == "__main__":
     parser.add_argument("--log_every", type=int, default=20)
     parser.add_argument("--eval_every", type=int, default=5)
     parser.add_argument("--lr", type=float, default=0.003)
+    parser.add_argument("--feat_dropout", type=float, default=0.6)
+    parser.add_argument("--attn_dropout", type=float, default=0.6)
     #parser.add_argument("--dropout", type=float, default=0.5)
     parser.add_argument(
         "--local_rank", type=int, help="get rank of the process"
