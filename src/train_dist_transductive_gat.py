@@ -90,7 +90,7 @@ def evaluate(
     emb_layer.eval()
     with th.no_grad():
         inputs = load_embs(standalone, emb_layer, g)
-        pred = model.inference(g, inputs, batch_size, args.heads, device)
+        pred = model.inference(g, inputs, batch_size, device)
     model.train()
     emb_layer.train()
     return compute_acc(pred[val_nid], labels[val_nid]), compute_acc(
