@@ -11,6 +11,7 @@ import torch as th
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import tqdm
 
 
 def load_subtensor(g, seeds, input_nodes, device, load_feat=True):
