@@ -8,6 +8,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import dgl
 from dgl.distributed import DistEmbedding
+from optim import SparseAdam_with_mask
 from train_dist import DistSAGE, compute_acc        
 
 
