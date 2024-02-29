@@ -1,0 +1,13 @@
+Part 0 | Epoch 00000 | Step 00000 | Loss 7.2117 | Train Acc 0.0070 | Speed (samples/sec) nan | GPU 3420.7 MB | time 24.660 s
+Part 0 | Epoch 00000 | Step 00020 | Loss 4.4258 | Train Acc 0.0820 | Speed (samples/sec) 57.1128 | GPU 3427.7 MB | time 352.023 s
+=====================
+Part 0, Epoch Time(s): 671.4920
+Sampling Time(s): 3.5141
+Loading Time(s): 60.9458
+Forward Time(s): 2.1679
+Backward Time(s): 34.6975
+Update Time(s): 0.1615
+Emb Update Time(s): 569.8940
+#seeds: 37725
+#inputs: 17004116
+=====================Part 0 | Epoch 00001 | Step 00000 | Loss 3.8261 | Train Acc 0.2190 | Speed (samples/sec) 56.8716 | GPU 3448.9 MB | time 18.668 s

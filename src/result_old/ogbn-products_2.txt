@@ -1,0 +1,21 @@
+Epoch 1, Val Acc avg 0.3100, Test Acc avg 0.2658
+Epoch 2, Val Acc avg 0.6180, Test Acc avg 0.4491
+Epoch 3, Val Acc avg 0.7882, Test Acc avg 0.5781
+Epoch 4, Val Acc avg 0.8781, Test Acc avg 0.6639
+Epoch 5, Val Acc avg 0.9007, Test Acc avg 0.7067
+Epoch 6, Val Acc avg 0.9068, Test Acc avg 0.7219
+Epoch 7, Val Acc avg 0.9118, Test Acc avg 0.7344
+Epoch 8, Val Acc avg 0.9141, Test Acc avg 0.7402
+Epoch 9, Val Acc avg 0.9163, Test Acc avg 0.7444
+Epoch 10, Val Acc avg 0.9169, Test Acc avg 0.7495
+Epoch 11, Val Acc avg 0.9173, Test Acc avg 0.7512
+Epoch 12, Val Acc avg 0.9166, Test Acc avg 0.7507
+Epoch 13, Val Acc avg 0.9158, Test Acc avg 0.7513
+Epoch 14, Val Acc avg 0.9151, Test Acc avg 0.7491
+Epoch 15, Val Acc avg 0.9142, Test Acc avg 0.7493
+Epoch 16, Val Acc avg 0.9124, Test Acc avg 0.7481
+Epoch 17, Val Acc avg 0.9110, Test Acc avg 0.7457
+Epoch 18, Val Acc avg 0.9095, Test Acc avg 0.7422
+Epoch 19, Val Acc avg 0.9091, Test Acc avg 0.7425
+Epoch 20, Val Acc avg 0.9078, Test Acc avg 0.7397
+Avg_epoch: 30.299188507927788, throughput: 405.58842019100877, len(train_nid): 12289

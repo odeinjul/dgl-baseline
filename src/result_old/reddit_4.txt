@@ -1,0 +1,5 @@
+Epoch 5, Val Acc avg 0.3717, Test Acc avg 0.3709
+Epoch 10, Val Acc avg 0.8194, Test Acc avg 0.8169
+Epoch 15, Val Acc avg 0.9208, Test Acc avg 0.9205
+Epoch 20, Val Acc avg 0.9291, Test Acc avg 0.9304
+Avg_epoch: 4.40029595957862, throughput: 1089.6994302308651, len(train_nid): 4795
