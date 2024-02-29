@@ -300,8 +300,8 @@ def run(args, device, data, group=None):
 
     iter_tput = []
     epoch = 0
-    log_path = f'./result/{args.model}_{args.graph_name}_{args.hot_rate}_from_{"top" if args.from_top else "bottom"}.log'
-    res_path = f'./result/{args.model}_{args.graph_name}_{args.hot_rate}_from_{"top" if args.from_top else "bottom"}.txt'
+    log_path = f'./result/graphsage_{args.graph_name}_{args.hot_rate}_from_{"top" if args.from_top else "bottom"}.log'
+    res_path = f'./result/graphsage__{args.graph_name}_{args.hot_rate}_from_{"top" if args.from_top else "bottom"}.txt'
     epoch_list = []
     for epoch in range(args.num_epochs):
         tic = time.time()
