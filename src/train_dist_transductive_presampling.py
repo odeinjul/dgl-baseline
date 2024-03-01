@@ -136,12 +136,13 @@ def presampling(dataloader, num_nodes, num_epochs=1):
     sorted = th.sort(result_tensor)[0]
     sorted = sorted[sorted != 0]
     cumulative_prob = np.arange(len(sorted)) / float(len(sorted))
-    plt.plot(sorted, cumulative_prob, label='papers100m')
+    plt.plot(sorted, cumulative_prob, label=f'{args.graph_name}')
     plt.xlabel('Access frequency')
     plt.title('Access frequency of vertices \n averaged across all mini-batches during training')
     plt.legend()
-    save_path = os.path.expanduser('./papers100m_minibatch_avg.png')
-    plt.savefig(save_path)
+    save_path = os.path.expanduser(f'./result/{args.graph_name}_minibatch_presampling.png')
+    if th.distributed.get_rank() == 0:
+        plt.savefig(save_path)
 
     return presampling_heat
 
@@ -191,38 +192,13 @@ def presampling_accross_machine(dataloader, num_nodes, num_epochs=1, group=None)
             sorted = th.sort(presampling_temp)[0]
             sorted = sorted[sorted != 0]
             cumulative_prob = np.arange(len(sorted)) / float(len(sorted))
-            plt.plot(sorted, cumulative_prob, label=f'products')
+            plt.plot(sorted, cumulative_prob, label=f'{args.graph_name}')
             plt.xlabel('Access frequency')
             plt.title(f'Access frequency of vertices accessed across {i} machine(s)')
             plt.legend()
-            save_path = os.path.expanduser(f'~/products_heat_am_{i}.png')
+            save_path = os.path.expanduser(f'./result/{args.graph_name}_heat_am_{i}.png')
             plt.savefig(save_path)
         return presampling_heat_am
-
-def presampling_count(dataloader, presampling_heat, num_epochs=1):
-    for epoch in range(num_epochs):
-        if(th.distributed.get_rank() == 0):
-            for step, (input_nodes, seeds, blocks) in enumerate(dataloader):
-                presampling_temp = presampling_heat[blocks[0].ndata[dgl.NID]["_N"][blocks[0].srcnodes()]]
-                sorted = th.sort(presampling_temp)[0]
-                """
-                min_value = sorted.min().item()
-                max_value = sorted.max().item()
-                bin_edges = th.linspace(min_value, max_value, steps=11)
-                heat_distribution = th.histc(sorted.float(), bins=10, min=min_value, max= max_value)
-                print('------')
-                for i in range(10):
-                    print(f'Batch {step}, {i+1}: {bin_edges[i].item()} - {bin_edges[i+1].item()}， {heat_distribution[i]}')
-                print('------')
-            
-                quantiles = th.quantile(sorted.float(), th.linspace(0, 1, steps=11), 0)
-                print('------')
-                for i in range(len(quantiles) - 1):
-                    start_value = quantiles[i].item()
-                    end_value = quantiles[i + 1].item()
-                    print(f'Batch {step}, Bin {i + 1}: {start_value} - {end_value}')
-                print('------')
-                """
 
     
 def run(args, device, data, group=None):
