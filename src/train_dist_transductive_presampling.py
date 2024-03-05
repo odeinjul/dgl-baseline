@@ -140,20 +140,20 @@ def presampling(dataloader, num_nodes, num_epochs=1):
     plt.xlabel(f'Access frequency')
     plt.title('Access frequency of all vertices')
     plt.legend()
-    save_path = os.path.expanduser(f'./result/{args.graph_name}_fullgraph_presampling_{args.fan_out}.pdf')
+    save_path = os.path.expanduser(f'./result/{args.graph_name}_presampling_{args.fan_out}.pdf')
     
     if th.distributed.get_rank() == 0:
         plt.savefig(save_path)
 
     if th.distributed.get_rank() == 0:
         print(
-        "Presampling done, max: {:.3f} min: {:.3f} avg: {:.3f}, time: {:.3f} s"
+        "Presampling done, max: {:.3f} min: {:.3f} avg: {:.3f}"
         .format(
-            torch.max(hotness_list).item(),
-            torch.min(hotness_list).item(),
-            torch.mean(hotness_list).item(), toc - tic))
-        save_fn =  os.path.expanduser(f'./result/{args.graph_name}_presampling_{args.fan_out}.pt')
-        th.save(hotness_list, save_fn)
+            th.max(presampling_heat).item(),
+            th.min(presampling_heat).item(),
+            th.mean(presampling_heat).item()))
+        save_fn =  os.path.expanduser(f'./result/{args.graph_name}_presampling_heat_{args.fan_out}.pt')
+        th.save(presampling_heat, save_fn)
         print("Result saved to {}".format(save_fn))
         
     return presampling_heat

@@ -142,10 +142,20 @@ def presampling(dataloader, num_nodes, num_epochs=1):
     plt.legend()
     save_path = os.path.expanduser(f'./result/{args.graph_name}_presampling_{args.fan_out}.pdf')
     
-    #TODO: Change png to pdf
     if th.distributed.get_rank() == 0:
         plt.savefig(save_path)
 
+    if th.distributed.get_rank() == 0:
+        print(
+        "Presampling done, max: {:.3f} min: {:.3f} avg: {:.3f}"
+        .format(
+            th.max(presampling_heat).item(),
+            th.min(presampling_heat).item(),
+            th.mean(presampling_heat).item()))
+        save_fn =  os.path.expanduser(f'./result/{args.graph_name}_presampling_heat_{args.fan_out}.pt')
+        th.save(presampling_heat, save_fn)
+        print("Result saved to {}".format(save_fn))
+        
     return presampling_heat
 
 def presampling_accross_machine(dataloader, num_nodes, num_epochs=1, group=None):
@@ -218,24 +228,14 @@ def run(args, device, data, group=None):
         drop_last=False,
     )
     
-    tic = time.time()
     if args.presampling:      
         hot_rate = args.hot_rate
         hotness_list = presampling(dataloader, g.num_nodes())
     if args.presampling_am:
         hotness_list = presampling_accross_machine(dataloader, g.num_nodes(), group=group)
-    toc = time.time()
     
-    if th.distributed.get_rank() == 0:
-        print(
-        "Presampling done, max: {:.3f} min: {:.3f} avg: {:.3f}, time: {:.3f} s"
-        .format(
-            torch.max(hotness_list).item(),
-            torch.min(hotness_list).item(),
-            torch.mean(hotness_list).item(), toc - tic))
-        save_fn =  os.path.expanduser(f'./result/{args.graph_name}_presampling_{args.fan_out}.pt')
-        torch.save(hotness_list, save_fn)
-        print("Result saved to {}".format(save_fn))
+    
+
 
 
 def main(args):
