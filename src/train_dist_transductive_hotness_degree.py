@@ -161,9 +161,9 @@ def presampling(dataloader, num_nodes, num_epochs=1):
  
 def run(args, device, data, group=None):
     import os
-    """
+    train_nid, val_nid, test_nid, n_classes, g = data
+    degree_list = g.in_degrees()
     if th.distributed.get_rank() == 0:
-        print(degree_list.shape)
         save_fn =  os.path.expanduser(f'./result/{args.graph_name}_degree_list.pt')
         th.save(degree_list, save_fn)
         print("Result saved to {}".format(save_fn))
@@ -210,7 +210,7 @@ def run(args, device, data, group=None):
         plt.legend()
         save_path = os.path.expanduser(f'./result/{args.graph_name}_degree_hotness_{args.fan_out}.pdf')
         plt.savefig(save_path)
-    
+    """
     
 def main(args):
     dgl.distributed.initialize(args.ip_config)
