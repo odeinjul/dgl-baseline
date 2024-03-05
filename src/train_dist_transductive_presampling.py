@@ -136,11 +136,13 @@ def presampling(dataloader, num_nodes, num_epochs=1):
     sorted = th.sort(result_tensor)[0]
     sorted = sorted[sorted != 0]
     cumulative_prob = np.arange(len(sorted)) / float(len(sorted))
-    plt.plot(sorted, cumulative_prob, label=f'{args.graph_name}')
-    plt.xlabel('Access frequency')
-    plt.title('Access frequency of vertices \n averaged across all mini-batches during training')
+    plt.plot(sorted, cumulative_prob, label=f'{args.graph_name}, {args.fan_out}')
+    plt.xlabel(f'Access frequency')
+    plt.title('Access frequency of all vertices')
     plt.legend()
-    save_path = os.path.expanduser(f'./result/{args.graph_name}_minibatch_presampling.png')
+    save_path = os.path.expanduser(f'./result/{args.graph_name}_fullgraph_presampling_{args.fan_out}.pdf')
+    
+    #TODO: Change png to pdf
     if th.distributed.get_rank() == 0:
         plt.savefig(save_path)
 
