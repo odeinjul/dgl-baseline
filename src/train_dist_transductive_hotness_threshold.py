@@ -14,11 +14,14 @@ def calculate_throughput(hotness_list, nm=4, nl=8, nt=32):
     hot = th.zeros_like(hotness_tensor)
     cold = th.zeros_like(hotness_tensor)
     
-    hotness_tensor_cliped = hotness_tensor
-    hotness_tensor_cliped[hotness_tensor_cliped < 1/100] = 1/100
+    tmp_cliped = 1 / hotness_tensor
+    tmp_cliped[tmp_cliped > 16] = 16
+    
+    live_cliped = tmp_cliped / (nl * hotness_tensor)
+    #live_cliped[live_cliped > 100] = 100
     
     hot = hotness_tensor * nt * ((nm - 1) / nm) + (1 - th.pow(1 - hotness_tensor, nl)) * (nm - 1)
-    cold = hotness_tensor * hotness_tensor_cliped * nt * ((nm - 1) / nm) * 2
+    cold = (hotness_tensor * nt  / live_cliped) * ((nm - 1) / nm) * 2
 
     return hot, cold
 
@@ -28,9 +31,9 @@ def calculate_throughput_single(hotness_list, nm=1, nl=8, nt=8):
     cold = th.zeros_like(hotness_tensor)
     
     hotness_tensor_cliped = hotness_tensor
-    hotness_tensor_cliped[hotness_tensor_cliped < 1/100] = 1/100
+    hotness_tensor_cliped[hotness_tensor_cliped < 1/16] = 1/16
     
-    hot = hotness_tensor * nt + (1 - th.pow(1 - hotness_tensor, nl))
+    hot = hotness_tensor * nt * 2
     cold = hotness_tensor * hotness_tensor_cliped * nt * 2
 
     return hot, cold
@@ -44,13 +47,14 @@ def main(args):
         
     hotness_list = hotness_list[hotness_list != 0]
 
-
     throughput = th.zeros((100, ), dtype=th.float32)
     cold_throughput = th.zeros((100, ), dtype=th.float32)
     hot_throughput = th.zeros((100, ), dtype=th.float32)
     
-    #hot_vol, cold_vol = calculate_throughput(hotness_list)
-    hot_vol, cold_vol = calculate_throughput_single(hotness_list)
+    if args.single:
+        hot_vol, cold_vol = calculate_throughput_single(hotness_list)
+    else:
+        hot_vol, cold_vol = calculate_throughput(hotness_list)
     
     x_axis = th.linspace(0, 1, 100)
     for i in tqdm.tqdm(range(100)):
@@ -68,10 +72,10 @@ def main(args):
     
     plt.xticks(np.arange(0, 1.1, 0.1))
     plt.ylabel('Communication Volume')
-    plt.xlabel(f'Threshold nl=8')
+    plt.xlabel(f'Threshold nm={1 if args.single else 4}, nl={8}, nt={8 if args.single else 32}')
     plt.title(f'Communication Volume vs Threshold in {args.graph_name}, fan_out={args.fan_out}')
     plt.legend()
-    save_path = os.path.expanduser(f'../src/result/{args.graph_name}_throughput_vs_threshold_{args.fan_out}_single.pdf')
+    save_path = os.path.expanduser(f'../src/result/{args.graph_name}_throughput_vs_threshold_{args.fan_out}{"_single" if args.single else ""}.pdf')
     plt.savefig(save_path)
 
 
@@ -81,6 +85,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="GCN")
     parser.add_argument("--graph_name", type=str, help="graph name")
     parser.add_argument("--fan_out", type=str, default="10,25")
+    parser.add_argument("--single", action="store_true", help="single threshold")
     args = parser.parse_args()
 
     print(args)
