@@ -267,7 +267,7 @@ def main(args):
             part_config=args.part_config
         )
     print("rank:", g.rank())
-    if tf.distributed.get_rank() == 0:
+    if th.distributed.get_rank() == 0:
         # print total number of nodes and size of train set
         print("Total number of nodes:", g.num_nodes())
         print("Number of nodes in train set:", len(g.ndata["train_mask"]))
@@ -276,7 +276,7 @@ def main(args):
     train_nid = dgl.distributed.node_split(
         g.ndata["train_mask"], pb, force_even=True
     )
-    if args.graph_name == "ogb-products" or args.DistGraph == "ogb-paper100M":
+    if args.graph_name == "ogb-products" or args.graph_name == "ogb-paper100M":
         val_nid = dgl.distributed.node_split(g.ndata["val_mask"],
                                              pb,
                                              force_even=True)
