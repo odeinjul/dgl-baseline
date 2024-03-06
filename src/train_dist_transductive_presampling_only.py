@@ -276,7 +276,7 @@ def main(args):
     train_nid = dgl.distributed.node_split(
         g.ndata["train_mask"], pb, force_even=True
     )
-    if args.graph_name == "ogb-products" or args.graph_name == "ogb-paper100M":
+    if args.graph_name == "ogbn-products" or args.graph_name == "ogb-paper100M":
         val_nid = dgl.distributed.node_split(g.ndata["val_mask"],
                                              pb,
                                              force_even=True)
