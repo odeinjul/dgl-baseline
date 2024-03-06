@@ -6,36 +6,38 @@ import torch as th
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-
+import tqdm
 import matplotlib.pyplot as plt   
 
-def calculate_throughput(hotness_list, threshold, slice=100, nm=4, nl=8, nt=32):
-    sum = 0
-    hot, cold = 0, 0
-    for i in range(slice):
-        start_value = i / slice
-        end_value = (i + 1) / slice
-        indices = th.where((hotness_list >= start_value) & (hotness_list < end_value))
-        hotness = (start_value + end_value) / 2
-        count  = len(indices)
-        if hotness > threshold: # hot
-            single = hotness * nt * ((nm - 1) / nm) + (1 - pow(1-hotness, nl)) * (nm - 1)
-            sum += single * count 
-            hot += single * count 
-
-        else: # cold
-            single = hotness * (1 / 100 if hotness < 1/100 else hotness) * nt * ((nm - 1) / nm) * 2
-            sum += single * count
-            cold += single * count
+def calculate_throughput(hotness_list, nm=4, nl=8, nt=32):
+    hotness_tensor = th.tensor(hotness_list, dtype=th.float32)
+    hot = th.zeros_like(hotness_tensor)
+    cold = th.zeros_like(hotness_tensor)
     
-    return sum, hot, cold
+    hotness_tensor_cliped = hotness_tensor
+    hotness_tensor_cliped[hotness_tensor_cliped < 1/100] = 1/100
     
+    hot = hotness_tensor * nt * ((nm - 1) / nm) + (1 - th.pow(1 - hotness_tensor, nl)) * (nm - 1)
+    cold = hotness_tensor * hotness_tensor_cliped * nt * ((nm - 1) / nm) * 2
 
+    return hot, cold
+
+def calculate_throughput_single(hotness_list, nm=1, nl=8, nt=8):
+    hotness_tensor = th.tensor(hotness_list, dtype=th.float32)
+    hot = th.zeros_like(hotness_tensor)
+    cold = th.zeros_like(hotness_tensor)
+    
+    hotness_tensor_cliped = hotness_tensor
+    hotness_tensor_cliped[hotness_tensor_cliped < 1/100] = 1/100
+    
+    hot = hotness_tensor * nt + (1 - th.pow(1 - hotness_tensor, nl))
+    cold = hotness_tensor * hotness_tensor_cliped * nt * 2
+
+    return hot, cold
+            
 def main(args):
     print("Loading training data")
-    save_fn =  os.path.expanduser(f'../src/result/{args.graph_name}_degree_list.pt')
-    degree_list = th.load(save_fn)
-    print("Result loaded from {}".format(save_fn))
+    
     save_fn = os.path.expanduser(f'../src/result/{args.graph_name}_presampling_heat_{args.fan_out}.pt')
     hotness_list = th.load(save_fn)
     print("Result loaded from {}".format(save_fn))
@@ -44,23 +46,32 @@ def main(args):
 
 
     throughput = th.zeros((100, ), dtype=th.float32)
-    hot_th = th.zeros((100, ), dtype=th.float32)
-    cold_th = th.zeros((100, ), dtype=th.float32)
+    cold_throughput = th.zeros((100, ), dtype=th.float32)
+    hot_throughput = th.zeros((100, ), dtype=th.float32)
+    
+    #hot_vol, cold_vol = calculate_throughput(hotness_list)
+    hot_vol, cold_vol = calculate_throughput_single(hotness_list)
+    
     x_axis = th.linspace(0, 1, 100)
-    for i in range(100):
-        throughput[i], hot_th[i], cold_th[i] = calculate_throughput(hotness_list, i / 100)
+    for i in tqdm.tqdm(range(100)):
+        threshold = x_axis[i]
+        hot = th.sum(hot_vol[hotness_list > threshold])
+        cold = th.sum(cold_vol[hotness_list <= threshold])
+        cold_throughput[i] = cold
+        hot_throughput[i] = hot
+        throughput[i] = hot + cold
     
     plt.plot(x_axis, throughput, label=f'Total Communication Volume')
     # dashed line
-    plt.plot(x_axis, hot_th, label=f'Hot Communication Volume', color='r', linestyle='dashed')
-    plt.plot(x_axis, cold_th, label=f'Cold Communication Volume', color='g', linestyle='dashed')
+    plt.plot(x_axis, hot_throughput, label=f'Hot Communication Volume', color='r', linestyle='dashed')
+    plt.plot(x_axis, cold_throughput, label=f'Cold Communication Volume', color='g', linestyle='dashed')
     
     plt.xticks(np.arange(0, 1.1, 0.1))
     plt.ylabel('Communication Volume')
-    plt.xlabel('Threshold')
+    plt.xlabel(f'Threshold nl=8')
     plt.title(f'Communication Volume vs Threshold in {args.graph_name}, fan_out={args.fan_out}')
     plt.legend()
-    save_path = os.path.expanduser(f'../src/result/{args.graph_name}_throughput_vs_threshold_{args.fan_out}.pdf')
+    save_path = os.path.expanduser(f'../src/result/{args.graph_name}_throughput_vs_threshold_{args.fan_out}_single.pdf')
     plt.savefig(save_path)
 
 
