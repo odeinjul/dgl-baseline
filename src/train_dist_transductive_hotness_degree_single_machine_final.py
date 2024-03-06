@@ -54,11 +54,11 @@ def main(args):
     hotness_count = tmp(args.graph_name, "10,10,10,10,10,10")
     plt.plot(x_axis, hotness_count, label=f'fan_out = 10,10,10,10,10,10', color="#1A9050")
     """
-    hotness_count = tmp(args.graph_name, "10,15")
-    plt.plot(x_axis, hotness_count, label=f'fan_out = 15,10', color="#819fa6")
+    #hotness_count = tmp(args.graph_name, "10,15")
+    #plt.plot(x_axis, hotness_count, label=f'fan_out = 15,10', color="#819fa6")
     
-    hotness_count = tmp(args.graph_name, "10,25")
-    plt.plot(x_axis, hotness_count, label=f'fan_out = 25,10', color="#c18076")
+    #hotness_count = tmp(args.graph_name, "10,25")
+    #plt.plot(x_axis, hotness_count, label=f'fan_out = 25,10', color="#c18076")
     
     #hotness_count = tmp(args.graph_name, "5,10,15")
     #plt.plot(x_axis, hotness_degree, label=f'fan_out = {5,10,15}')
