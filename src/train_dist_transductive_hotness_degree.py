@@ -158,12 +158,66 @@ def presampling(dataloader, num_nodes, num_epochs=1):
         
     return presampling_heat
 
- 
+def presampling_accross_machine(dataloader, num_nodes, num_epochs=1, group=None):
+    presampling_heat_am = th.zeros((num_nodes, ), dtype=th.int64)
+    for epoch in range(num_epochs):
+        for step, (input_nodes, seeds, blocks) in enumerate(dataloader):
+            presampling_heat_am[input_nodes] += 1
+
+    if th.distributed.get_backend() == "nccl":
+        presampling_heat_am = presampling_heat_am.cuda()
+        th.distributed.all_reduce(presampling_heat_am,
+                                     th.distributed.ReduceOp.SUM, group=group)
+        presampling_heat_am = (presampling_heat_am > 0).to(th.int64)
+        th.distributed.all_reduce(presampling_heat_am,
+                                     th.distributed.ReduceOp.SUM)
+        presampling_heat_am = presampling_heat_am / 8
+        presampling_heat_am = presampling_heat_am.cpu()
+    else:
+        th.distributed.all_reduce(presampling_heat_am,
+                                     th.distributed.ReduceOp.SUM, group=group)
+        presampling_heat_am = (presampling_heat_am > 0).to(th.int64)
+        th.distributed.all_reduce(presampling_heat_am,
+                                     th.distributed.ReduceOp.SUM)
+        presampling_heat_am = presampling_heat_am / 8
+
+    sorted = th.sort(presampling_heat_am)[0]
+    presampling_hotness = presampling(dataloader, num_nodes)
+    if th.distributed.get_rank() == 0:
+        print(f"total: {len(presampling_heat_am)}")
+        for i in range(5):
+            print(f'presampling_accross_machine = {i}: {len(presampling_heat_am[presampling_heat_am == i])}, rate: {len(presampling_heat_am[presampling_heat_am == i]) / len(presampling_heat_am)}')
+        quantiles = th.quantile(sorted.float(), th.linspace(0, 1, steps=11), 0)
+        print('------')
+        for i in range(len(quantiles) - 1):
+            start_value = quantiles[i].item()
+            end_value = quantiles[i + 1].item()
+            print(f'Batch {step}, Bin {i + 1}: {start_value} - {end_value}')
+        print('------')
+
+        import matplotlib.pyplot as plt   
+        import os  
+        for i in range(1, 5):                
+            plt.clf()
+            print(f"{i}, {len(presampling_hotness[presampling_heat_am == i])}")            
+            presampling_temp = presampling_hotness[presampling_heat_am == i]
+            sorted = th.sort(presampling_temp)[0]
+            sorted = sorted[sorted != 0]
+            cumulative_prob = np.arange(len(sorted)) / float(len(sorted))
+            plt.plot(sorted, cumulative_prob, label=f'{args.graph_name}')
+            plt.xlabel('Access frequency')
+            plt.title(f'Access frequency of vertices accessed across {i} machine(s)')
+            plt.legend()
+            save_path = os.path.expanduser(f'./result/{args.graph_name}_heat_am_{i}.png')
+            plt.savefig(save_path)
+        return presampling_heat_am
+
+    
 def run(args, device, data, group=None):
     import os
-    train_nid, val_nid, test_nid, n_classes, g = data
-    degree_list = g.in_degrees()
+    """
     if th.distributed.get_rank() == 0:
+        print(degree_list.shape)
         save_fn =  os.path.expanduser(f'./result/{args.graph_name}_degree_list.pt')
         th.save(degree_list, save_fn)
         print("Result saved to {}".format(save_fn))
@@ -180,37 +234,31 @@ def run(args, device, data, group=None):
         # delete hotness = 0
         degree_list = degree_list[hotness_list != 0]
         hotness_list = hotness_list[hotness_list != 0]
-        print (len(degree_list), len(hotness_list))
 
-        sorted_degree, sorted_indices = th.sort(degree_list)
-        sorted_hotness = degree_list[sorted_indices]
-       
-        avg_hotness = th.zeros((20, ), dtype=th.float32)
-        degree_count = th.zeros((20, ), dtype=th.float32)
-        
-        # divide 20 bins from degree.min to degree.max
-        step = (th.max(sorted_degree) - th.min(sorted_degree)) / 20
-        for i in range(20):
-            start_value = th.min(sorted_degree) + i * step
-            end_value = start_value + step
-            indices = th.where((sorted_degree >= start_value) & (sorted_degree < end_value))
-            avg_hotness[i] = th.mean(th.Tensor.float(sorted_hotness[indices]))
-            degree_count[i] = (start_value + end_value) / 2
-            
-
-       
+        sorted_hotness, sorted_indices = th.sort(hotness_list)
+        sorted_degree = degree_list[sorted_indices]
+    
+        hotness_degree = th.zeros((100, ), dtype=th.float32)
+        hotness_count = th.zeros((100, ), dtype=th.float32)
+        for i in range(100):
+            start_value = i / 100
+            end_value = (i + 1) / 100
+            indices = th.where((sorted_hotness >= start_value) & (sorted_hotness < end_value))
+            hotness_count[i] = (start_value + end_value) / 2
+            hotness_degree[i] = th.mean(th.Tensor.float(sorted_degree[indices]))
+    
         # make a plot, the x-axis is hotness, the y-axis is average degree
         import matplotlib.pyplot as plt
-        plt.plot(degree_count, avg_hotness, label=f'{args.graph_name}, {args.fan_out}')
+        plt.plot(hotness_count, hotness_degree, label=f'{args.graph_name}, {args.fan_out}')
         # set plot x axis from 0, 0.1, 0.2, ..., 0.9, 1.0
-        plt.xticks(np.arange(th.min(sorted_degree), th.max(sorted_degree), step*2))
-        plt.ylabel('Average Hotness')
-        plt.xlabel('Vertices Degree')
-        plt.title('Average hotness of vertices of different hotness')
+        plt.xticks(np.arange(0, 1.1, 0.1))
+        plt.ylabel('Average Node Degree')
+        plt.xlabel('Vertices Hotness')
+        plt.title('Average degree of vertices of different hotness')
         plt.legend()
-        save_path = os.path.expanduser(f'./result/{args.graph_name}_degree_hotness_{args.fan_out}.pdf')
+        save_path = os.path.expanduser(f'./result/{args.graph_name}_hotness_degree_{args.fan_out}.pdf')
         plt.savefig(save_path)
-    """
+    
     
 def main(args):
     dgl.distributed.initialize(args.ip_config)

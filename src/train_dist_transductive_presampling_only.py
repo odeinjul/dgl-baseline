@@ -220,6 +220,7 @@ def run(args, device, data, group=None):
         import os
         save_fn =  os.path.expanduser(f'./result/{args.graph_name}_degree_list.pt')
         th.save(g.in_degrees(), save_fn)
+        
     
     sampler = dgl.dataloading.NeighborSampler(
         [int(fanout) for fanout in args.fan_out.split(",")]
@@ -238,10 +239,6 @@ def run(args, device, data, group=None):
         hotness_list = presampling(dataloader, g.num_nodes())
     if args.presampling_am:
         hotness_list = presampling_accross_machine(dataloader, g.num_nodes(), group=group)
-    
-    
-
-
 
 def main(args):
     dgl.distributed.initialize(args.ip_config)
@@ -270,17 +267,29 @@ def main(args):
             part_config=args.part_config
         )
     print("rank:", g.rank())
+    if tf.distributed.get_rank() == 0:
+        # print total number of nodes and size of train set
+        print("Total number of nodes:", g.num_nodes())
+        print("Number of nodes in train set:", len(g.ndata["train_mask"]))
 
     pb = g.get_partition_book()
     train_nid = dgl.distributed.node_split(
         g.ndata["train_mask"], pb, force_even=True
     )
-    val_nid = dgl.distributed.node_split(
-        g.ndata["val_mask"], pb, force_even=True
-    )
-    test_nid = dgl.distributed.node_split(
-        g.ndata["test_mask"], pb, force_even=True
-    )
+    if args.graph_name == "ogb-products" or args.DistGraph == "ogb-paper100M":
+        val_nid = dgl.distributed.node_split(g.ndata["val_mask"],
+                                             pb,
+                                             force_even=True)
+        test_nid = dgl.distributed.node_split(g.ndata["test_mask"],
+                                              pb,
+                                              force_even=True)
+    elif args.graph_name == "mag240m":
+        val_nid = dgl.distributed.node_split(g.ndata["valid_mask"],
+                                             pb,
+                                             force_even=True)
+        test_nid = dgl.distributed.node_split(g.ndata["test_mask"],
+                                              pb,
+                                              force_even=True)
     local_nid = pb.partid2nids(pb.partid).detach().numpy()
     print(
         "part {}, train: {} (local: {}), val: {} (local: {}), test: {} "
@@ -308,7 +317,6 @@ def main(args):
         run(args, device, data, group=group)
     else:
         run(args, device, data)
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="GCN")
