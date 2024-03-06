@@ -426,7 +426,7 @@ if __name__ == "__main__":
     parser.add_argument("--eval_every", type=int, default=5)
     parser.add_argument("--lr", type=float, default=0.003)
     parser.add_argument("--dropout", type=float, default=0.5)
-    parser.add_argument("--model_num_hidden", type=float, default=256)
+    parser.add_argument("--model_num_hidden", type=int, default=256)
     parser.add_argument("--local_rank",
                         type=int,
                         help="get rank of the process")

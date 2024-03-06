@@ -428,7 +428,7 @@ if __name__ == "__main__":
     parser.add_argument("--lr", type=float, default=0.003)
     parser.add_argument("--feat_dropout", type=float, default=0.1)
     parser.add_argument("--attn_dropout", type=float, default=0.1)
-    parser.add_argument("--model_num_hidden", type=float, default=32)
+    parser.add_argument("--model_num_hidden", type=int, default=32)
     parser.add_argument("--heads", type=str, default="8,8,1")
     parser.add_argument("--local_rank",
                         type=int,
