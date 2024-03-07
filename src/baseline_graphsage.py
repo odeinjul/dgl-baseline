@@ -112,6 +112,21 @@ def evaluate(
                                                      labels[test_nid])
 
 
+def evaluate2(args, model, g, val_nid, test_nid, emb_layer):
+    model = model.module
+    model.eval()
+    emb_layer.eval()
+    with th.no_grad():
+        inputs = load_embs(True, emb_layer, g)
+        val_pred = model.nodewise_inference(g, val_nid, inputs,
+                                            args.batch_size_eval)
+        test_pred = model.nodewise_inference(g, test_nid, inputs,
+                                             args.batch_size_eval)
+    model.train()
+    emb_layer.train()
+    return compute_acc(val_pred, g.ndata["labels"][val_nid]), compute_acc(
+        test_pred, g.ndata["labels"][test_nid])
+
 def run(args, device, data):
     # Unpack data
     train_nid, val_nid, test_nid, n_classes, g = data
@@ -295,17 +310,7 @@ def run(args, device, data):
 
         if epoch % args.eval_every == 0 and epoch != 0:
             start = time.time()
-            val_acc, test_acc = evaluate(
-                args.standalone,
-                model,
-                emb_layer,
-                g,
-                g.ndata["labels"],
-                val_nid,
-                test_nid,
-                args.batch_size_eval,
-                device,
-            )
+            val_acc, test_acc = evaluate2(args, model, g, val_nid, test_nid, emb_layer)
             print("Part {}, Val Acc {:.4f}, Test Acc {:.4f}, time: {:.4f}".
                   format(th.distributed.get_rank(), val_acc, test_acc,
                          time.time() - start))
@@ -421,7 +426,7 @@ if __name__ == "__main__":
     parser.add_argument("--num_hidden", type=int, default=256)
     parser.add_argument("--fan_out", type=str, default="5,10,15")
     parser.add_argument("--batch_size", type=int, default=1000)
-    parser.add_argument("--batch_size_eval", type=int, default=100000)
+    parser.add_argument("--batch_size_eval", type=int, default=1000)
     parser.add_argument("--log_every", type=int, default=20)
     parser.add_argument("--eval_every", type=int, default=5)
     parser.add_argument("--lr", type=float, default=0.003)

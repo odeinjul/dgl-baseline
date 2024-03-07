@@ -35,6 +35,27 @@ class DistSAGE(nn.Module):
                 h = self.dropout(h)
         return h
 
+    def nodewise_inference(self, g, nids, x, batch_size):
+        sampler = dgl.dataloading.MultiLayerFullNeighborSampler(self.n_layers)
+        dataloader = dgl.dataloading.DistNodeDataLoader(
+            g,
+            nids,
+            sampler,
+            batch_size=batch_size,
+            shuffle=True,
+            drop_last=False,
+        )
+        result = th.full((nids.shape[0], self.n_classes), -1, dtype=th.float)
+        map = th.full((g.num_nodes(), ), -1)
+        map[nids.cpu()] = th.arange(0, nids.shape[0])
+        for input_nodes, output_nodes, blocks in tqdm.tqdm(dataloader):
+            blocks = [block.to("cuda") for block in blocks]
+            batch_inputs = x[input_nodes].to("cuda")
+            pred = self.forward(blocks, batch_inputs)
+            result[map[output_nodes.cpu()]] = pred.cpu()
+        return result
+    
+
     def inference(self, g, x, batch_size, device):
         """
         Inference with the GraphSAGE model on full neighbors (i.e. without

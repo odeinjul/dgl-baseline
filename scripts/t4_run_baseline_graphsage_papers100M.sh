@@ -2,7 +2,7 @@ python3 ~/workspace/dgl-baseline/tools/launch.py --workspace ~/workspace/dgl-bas
     --num_trainers 8 \
     --num_servers 1 \
     --num_samplers 1 \
-    --part_config /home/ubuntu/workspace/data/papers100m_4p_ud/ogb-paper100M.json 
+    --part_config /home/ubuntu/workspace/data/ogbn-papers100m_4p_ud/ogb-paper100M.json \
     --ip_config ip_config_4p.txt \
     "/home/ubuntu/anaconda3/envs/dglbase/bin/python3 ~/workspace/dgl-baseline/src/baseline_graphsage.py --graph_name ogb-paper100M \
     --ip_config ip_config_4p.txt --num_gpus 8 --num_epochs 20 --eval_every 1 \
@@ -12,7 +12,7 @@ python3 ~/workspace/dgl-baseline/tools/launch.py --workspace ~/workspace/dgl-bas
     --num_trainers 8 \
     --num_servers 1 \
     --num_samplers 1 \
-    --part_config /home/ubuntu/workspace/data/papers100m_4p_ud/ogb-paper100M.json 
+    --part_config /home/ubuntu/workspace/data/ogbn-papers100m_4p_ud/ogb-paper100M.json \
     --ip_config ip_config_4p.txt \
     "/home/ubuntu/anaconda3/envs/dglbase/bin/python3 ~/workspace/dgl-baseline/src/baseline_graphsage.py --graph_name ogb-paper100M \
     --ip_config ip_config_4p.txt --num_gpus 8 --num_epochs 20 --eval_every 1 \
@@ -22,7 +22,7 @@ python3 ~/workspace/dgl-baseline/tools/launch.py --workspace ~/workspace/dgl-bas
     --num_trainers 8 \
     --num_servers 1 \
     --num_samplers 1 \
-    --part_config /home/ubuntu/workspace/data/papers100m_4p_ud/ogb-paper100M.json 
+    --part_config /home/ubuntu/workspace/data/ogbn-papers100m_4p_ud/ogb-paper100M.json \
     --ip_config ip_config_4p.txt \
     "/home/ubuntu/anaconda3/envs/dglbase/bin/python3 ~/workspace/dgl-baseline/src/baseline_graphsage.py --graph_name ogb-paper100M \
     --ip_config ip_config_4p.txt --num_gpus 8 --num_epochs 20 --eval_every 1 \
@@ -32,7 +32,7 @@ python3 ~/workspace/dgl-baseline/tools/launch.py --workspace ~/workspace/dgl-bas
     --num_trainers 8 \
     --num_servers 1 \
     --num_samplers 1 \
-    --part_config /home/ubuntu/workspace/data/papers100m_4p_ud/ogb-paper100M.json 
+    --part_config /home/ubuntu/workspace/data/ogbn-papers100m_4p_ud/ogb-paper100M.json \
     --ip_config ip_config_4p.txt \
     "/home/ubuntu/anaconda3/envs/dglbase/bin/python3 ~/workspace/dgl-baseline/src/baseline_graphsage.py --graph_name ogb-paper100M \
     --ip_config ip_config_4p.txt --num_gpus 8 --num_epochs 20 --eval_every 1 \
